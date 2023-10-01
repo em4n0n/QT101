@@ -12,16 +12,30 @@ def get_sp500_tickers():
     
 tickers = get_sp500_tickers()
 
-def get_history(ticker):
-    pass
+def get_history(ticker, period_start, period_end, granularity="1d"):
+    import yfinance
+    df = yfinance.Ticker(ticker).history(
+        start=period_start, 
+        end=period_end, 
+        interval=granularity, 
+        auto_adjust=True
+    ).reset_index()
+    df = df.rename(columns={
+        "Date":"datetime",
+        "Open":"Open",
+        "High":"High",
+        "Low":"Low",
+        "Close":"Close",
+        "Volume":"Volume"
+        
+    })
+    input(df)
 
 import pytz
 from datetime import datetime
 
 period_start = datetime(2010,1,1, tzinfo=pytz.utc)
-end_time = datetime(2020,1,1, tzinfo=pytz.utc)
-print(period_start,end_time)
-exit()
+period_end = datetime(2020,1,1, tzinfo=pytz.utc)
 
 for ticker in tickers:
-    get_history(ticker)
+    get_history(ticker, period_start, period_end)
