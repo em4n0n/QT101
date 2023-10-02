@@ -9,6 +9,7 @@ def get_sp500_tickers():
     table = soup.find_all('table')[0] 
     df = pd.read_html(str(table))
     tickers = list(df[0].Symbol)
+    return tickers
     
 tickers = get_sp500_tickers()
 
@@ -29,7 +30,13 @@ def get_history(ticker, period_start, period_end, granularity="1d"):
         "Volume":"Volume"
         
     })
-    input(df)
+    if df.empty:
+        return pd.DataFrame()
+
+    df["datetime"] = df["datetime"].dt.tz_localize(pytz.utc)
+    df = df.drop(columns=["Dividends", "Stock Splits"])
+    df = df.set_index("datetime",drop=True)
+    return df
 
 import pytz
 from datetime import datetime
@@ -38,4 +45,5 @@ period_start = datetime(2010,1,1, tzinfo=pytz.utc)
 period_end = datetime(2020,1,1, tzinfo=pytz.utc)
 
 for ticker in tickers:
-    get_history(ticker, period_start, period_end)
+    df = get_history(ticker, period_start, period_end)
+    print(ticker, df)
