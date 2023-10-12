@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import pytz
 from datetime import datetime
-
+import yfinance
 
 def get_sp500_tickers():
     
@@ -16,14 +16,18 @@ def get_sp500_tickers():
     
 
 
-def get_history(ticker, period_start, period_end, granularity="1d"):
-    import yfinance
-    df = yfinance.Ticker(ticker).history(
-        start=period_start, 
-        end=period_end, 
-        interval=granularity, 
-        auto_adjust=True
-    ).reset_index()
+def get_history(ticker, period_start, period_end, granularity="1d", tries=0):
+    try:
+            df = yfinance.Ticker(ticker).history(
+            start=period_start, 
+            end=period_end, 
+            interval=granularity, 
+            auto_adjust=True
+        ).reset_index()
+    except Exception as err:
+        if tries < 5:
+            return get_history(ticker, period_start, period_end, granularity, tries+1)
+        return pd.DataFrame()
     df = df.rename(columns={
         "Date":"datetime",
         "Open":"Open",
@@ -61,13 +65,19 @@ def get_histories(tickers, period_starts, period_ends, granularity="1d"):
     return tickers,dfs
 
 def get_ticker_dfs(start,end):
-    tickers = get_sp500_tickers()
-    starts= [start]*len(tickers)
-    ends=[end]*len(tickers)
-    tickers,dfs = get_histories(tickers, starts, ends, granularity="1d")
-    return tickers, {ticker:df for ticker, df in zip(tickers,dfs)}
+    from utils import load_pickle,save_pickle
+    try:
+        tickers, ticker_dfs = load_pickle("dataset.obj")
+    except Exception as err:
+        tickers = get_sp500_tickers()
+        starts= [start]*len(tickers)
+        ends=[end]*len(tickers)
+        tickers,dfs = get_histories(tickers, starts, ends, granularity="1d")
+        ticker_dfs = {ticker:df for ticker, df in zip(tickers,dfs)}
+        save_pickle("dataset.obj", (tickers,ticker_dfs))
+    return tickers, ticker_dfs
     
 period_start = datetime(2010,1,1, tzinfo=pytz.utc)
-period_end = datetime(2010,1,1, tzinfo=pytz.utc)
+period_end = datetime.now(pytz.utc)
 tickers, ticker_dfs = get_ticker_dfs(start=period_start, end=period_end)
 print(ticker_dfs)
